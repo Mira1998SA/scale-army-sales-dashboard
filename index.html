@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scale Army — Sales Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #0e0e11;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0ede8;
+    --muted: #888785;
+    --accent: #c8f060;
+    --accent2: #7c6af7;
+    --accent3: #f06060;
+    --accent4: #60c8f0;
+    --green: #4ade80;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --font-sans: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --font-serif: 'Instrument Serif', serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; min-height: 100vh; }
+
+  /* LAYOUT */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); padding: 24px 0; display: flex; flex-direction: column; position: fixed; height: 100vh; overflow-y: auto; }
+  .main { margin-left: 220px; flex: 1; padding: 32px; max-width: 1200px; }
+
+  /* SIDEBAR */
+  .logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .logo-mark { font-family: var(--font-serif); font-style: italic; font-size: 20px; color: var(--accent); letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-top: 2px; font-family: var(--font-mono); }
+  .nav-section { padding: 8px 12px; margin-bottom: 4px; }
+  .nav-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; padding: 0 8px; margin-bottom: 6px; font-family: var(--font-mono); }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm); cursor: pointer; color: var(--muted); font-size: 13px; transition: all 0.15s; border: none; background: none; width: 100%; text-align: left; }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: var(--accent); background: rgba(200,240,96,0.08); }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sidebar-footer { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent2), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; }
+  .avatar-row { display: flex; align-items: center; gap: 10px; }
+  .avatar-name { font-size: 13px; font-weight: 500; }
+  .avatar-role { font-size: 11px; color: var(--muted); }
+
+  /* TOP BAR */
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+  .page-title { font-family: var(--font-serif); font-style: italic; font-size: 28px; color: var(--text); }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .filter-row { display: flex; gap: 8px; }
+  .filter-btn { padding: 7px 16px; border-radius: 100px; border: 1px solid var(--border2); background: transparent; color: var(--muted); font-size: 12px; font-family: var(--font-sans); cursor: pointer; transition: all 0.15s; }
+  .filter-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #0e0e11; font-weight: 600; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .card-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--font-mono); margin-bottom: 16px; }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; position: relative; overflow: hidden; transition: border-color 0.2s; }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .kpi-card.k1::before { background: var(--accent); }
+  .kpi-card.k2::before { background: var(--accent2); }
+  .kpi-card.k3::before { background: var(--accent4); }
+  .kpi-card.k4::before { background: var(--accent3); }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--font-mono); }
+  .kpi-value { font-size: 30px; font-weight: 300; color: var(--text); margin: 8px 0 6px; letter-spacing: -1px; }
+  .kpi-trend { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+  .kpi-trend.up { color: var(--green); }
+  .kpi-trend.down { color: var(--red); }
+  .kpi-trend svg { width: 12px; height: 12px; }
+
+  /* CHARTS ROW */
+  .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 24px; }
+  .charts-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+
+  /* FUNNEL */
+  .funnel-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .funnel-stage { display: flex; align-items: center; gap: 12px; cursor: default; }
+  .funnel-label { font-size: 12px; color: var(--muted); width: 110px; flex-shrink: 0; font-family: var(--font-mono); }
+  .funnel-bar-wrap { flex: 1; height: 28px; background: var(--surface2); border-radius: 4px; overflow: hidden; position: relative; }
+  .funnel-bar { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 10px; font-size: 11px; font-weight: 600; color: #0e0e11; transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+  .funnel-count { font-size: 12px; color: var(--muted); width: 40px; text-align: right; font-family: var(--font-mono); }
+  .funnel-pct { font-size: 11px; color: var(--muted); width: 42px; text-align: right; font-family: var(--font-mono); }
+
+  /* TABLE */
+  .rep-table { width: 100%; border-collapse: collapse; }
+  .rep-table th { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--font-mono); padding: 0 12px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 400; cursor: pointer; white-space: nowrap; }
+  .rep-table th:hover { color: var(--text); }
+  .rep-table th.sort-active { color: var(--accent); }
+  .rep-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  .rep-table tr:last-child td { border-bottom: none; }
+  .rep-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .rep-name-cell { display: flex; align-items: center; gap: 10px; }
+  .rep-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
+  .progress-bar-wrap { height: 4px; background: var(--surface2); border-radius: 2px; width: 80px; margin-top: 3px; }
+  .progress-bar { height: 100%; border-radius: 2px; }
+  .badge { display: inline-flex; padding: 3px 8px; border-radius: 100px; font-size: 10px; font-family: var(--font-mono); font-weight: 500; }
+  .badge-green { background: rgba(74,222,128,0.12); color: var(--green); }
+  .badge-amber { background: rgba(251,191,36,0.12); color: var(--amber); }
+  .badge-red { background: rgba(248,113,113,0.12); color: var(--red); }
+
+  /* CHART HEIGHT WRAPPERS */
+  .chart-h260 { position: relative; width: 100%; height: 260px; }
+  .chart-h240 { position: relative; width: 100%; height: 240px; }
+  .chart-h200 { position: relative; width: 100%; height: 200px; }
+
+  /* LEGEND */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ACTIVITY FEED */
+  .activity-list { display: flex; flex-direction: column; gap: 0; }
+  .activity-item { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-icon { width: 28px; height: 28px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; margin-top: 1px; }
+  .ai-call { background: rgba(124,106,247,0.15); color: var(--accent2); }
+  .ai-email { background: rgba(96,200,240,0.15); color: var(--accent4); }
+  .ai-meeting { background: rgba(200,240,96,0.15); color: var(--accent); }
+  .ai-closed { background: rgba(74,222,128,0.15); color: var(--green); }
+  .activity-text { font-size: 13px; line-height: 1.5; flex: 1; }
+  .activity-text strong { color: var(--text); font-weight: 500; }
+  .activity-time { font-size: 11px; color: var(--muted); font-family: var(--font-mono); flex-shrink: 0; margin-top: 2px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  @media (max-width: 1100px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    .charts-row2 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 20px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" aria-label="Main navigation">
+    <div class="logo">
+      <div class="logo-mark">Scale Army</div>
+      <div class="logo-sub">Sales Intelligence</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Overview</div>
+      <button class="nav-item active" onclick="setPage('overview')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" onclick="setPage('pipeline')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h14M3 18h10"/></svg>
+        Pipeline
+      </button>
+      <button class="nav-item" onclick="setPage('reps')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Rep Performance
+      </button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Reports</div>
+      <button class="nav-item" onclick="setPage('revenue')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Revenue Trends
+      </button>
+      <button class="nav-item" onclick="setPage('sources')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l5 3"/></svg>
+        Lead Sources
+      </button>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar-row">
+        <div class="avatar">JD</div>
+        <div>
+          <div class="avatar-name">Jamie Davis</div>
+          <div class="avatar-role">Head of BD</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div>
+        <div class="page-title">Sales Overview</div>
+        <div class="page-sub">Updated May 2026 · All regions</div>
+      </div>
+      <div class="filter-row" role="group" aria-label="Date filter">
+        <button class="filter-btn" onclick="setFilter('month', this)">This month</button>
+        <button class="filter-btn active" onclick="setFilter('quarter', this)">This quarter</button>
+        <button class="filter-btn" onclick="setFilter('year', this)">This year</button>
+      </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="kpi-grid">
+      <div class="kpi-card k1">
+        <div class="kpi-label">Total Revenue</div>
+        <div class="kpi-value" id="kpi-revenue">$0</div>
+        <div class="kpi-trend up" id="kpi-rev-trend">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,9 6,3 10,9"/></svg>
+          <span>+18% vs last period</span>
+        </div>
+      </div>
+      <div class="kpi-card k2">
+        <div class="kpi-label">Deals Closed</div>
+        <div class="kpi-value" id="kpi-deals">0</div>
+        <div class="kpi-trend up">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,9 6,3 10,9"/></svg>
+          <span>+7 vs last period</span>
+        </div>
+      </div>
+      <div class="kpi-card k3">
+        <div class="kpi-label">Conversion Rate</div>
+        <div class="kpi-value" id="kpi-conv">0%</div>
+        <div class="kpi-trend down">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,3 6,9 10,3"/></svg>
+          <span>-2.1% vs last period</span>
+        </div>
+      </div>
+      <div class="kpi-card k4">
+        <div class="kpi-label">Avg Deal Size</div>
+        <div class="kpi-value" id="kpi-avg">$0</div>
+        <div class="kpi-trend up">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="2,9 6,3 10,9"/></svg>
+          <span>+$4.2k vs last period</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVENUE + SOURCES -->
+    <div class="charts-row">
+      <div class="card">
+        <div class="card-title">Monthly Revenue</div>
+        <div class="legend" id="rev-legend"></div>
+        <div class="chart-h260">
+          <canvas id="revenueChart" role="img" aria-label="Monthly revenue and target line chart showing 12 months of data">Monthly revenue chart</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Lead Sources</div>
+        <div class="chart-h200">
+          <canvas id="sourceChart" role="img" aria-label="Donut chart showing deal distribution by lead source">Lead source donut chart</canvas>
+        </div>
+        <div class="legend" id="source-legend" style="margin-top:14px; justify-content: center;"></div>
+      </div>
+    </div>
+
+    <!-- PIPELINE FUNNEL -->
+    <div class="charts-row2">
+      <div class="card">
+        <div class="card-title">Pipeline Funnel</div>
+        <div class="funnel-wrap" id="funnel"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Win Rate by Source</div>
+        <div class="chart-h240">
+          <canvas id="winrateChart" role="img" aria-label="Horizontal bar chart showing win rate percentage by lead source">Win rate by source chart</canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- REP LEADERBOARD -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <div class="card-title" style="margin-bottom:0;">Rep Leaderboard</div>
+        <div class="filter-row">
+          <button class="filter-btn active" id="sort-rev" onclick="sortReps('revenue', this)">Revenue</button>
+          <button class="filter-btn" id="sort-deals" onclick="sortReps('deals', this)">Deals</button>
+          <button class="filter-btn" id="sort-conv" onclick="sortReps('conv', this)">Conv %</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="rep-table" aria-label="Sales rep leaderboard">
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              <th>Rep</th>
+              <th>Revenue</th>
+              <th>vs Target</th>
+              <th>Deals Won</th>
+              <th>Conv Rate</th>
+              <th>Avg Size</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="rep-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ACTIVITY FEED -->
+    <div class="card">
+      <div class="card-title">Recent Activity</div>
+      <div class="activity-list" id="activity-list"></div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── DATA ────────────────────────────────────────────────────────────────
+const MONTHLY = {
+  quarter: {
+    labels: ['Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan'],
+    revenue: [142000,168000,155000,190000,210000,185000,225000,198000,240000,215000,262000,248000],
+    target:  [160000,160000,170000,180000,190000,195000,200000,210000,220000,230000,240000,250000]
+  }
+};
+
+const SOURCES = [
+  { label: 'Referral', value: 34, color: '#c8f060' },
+  { label: 'Outbound', value: 28, color: '#7c6af7' },
+  { label: 'Inbound', value: 22, color: '#60c8f0' },
+  { label: 'Event', value: 10, color: '#f0c060' },
+  { label: 'Partner', value: 6, color: '#f06060' }
+];
+
+const WIN_RATES = [
+  { label: 'Referral', rate: 62 },
+  { label: 'Inbound', rate: 48 },
+  { label: 'Partner', rate: 41 },
+  { label: 'Outbound', rate: 34 },
+  { label: 'Event', rate: 28 }
+];
+
+const FUNNEL_STAGES = [
+  { label: 'Prospecting', count: 248, color: '#7c6af7' },
+  { label: 'Qualified', count: 164, color: '#60c8f0' },
+  { label: 'Proposal', count: 98, color: '#c8f060' },
+  { label: 'Negotiation', count: 54, color: '#f0c060' },
+  { label: 'Closed Won', count: 38, color: '#4ade80' },
+  { label: 'Closed Lost', count: 16, color: '#f87171' }
+];
+
+const REPS = [
+  { name: 'Jordan Mills', initials: 'JM', color: '#7c6af7', region: 'APAC', revenue: 387000, target: 360000, deals: 14, conv: 58, avg: 27643 },
+  { name: 'Taylor Reed', initials: 'TR', color: '#c8f060', region: 'NA', revenue: 342000, target: 320000, deals: 11, conv: 52, avg: 31091 },
+  { name: 'Alex Chen', initials: 'AC', color: '#60c8f0', region: 'EMEA', revenue: 318000, target: 340000, deals: 13, conv: 49, avg: 24462 },
+  { name: 'Morgan Lee', initials: 'ML', color: '#f0c060', region: 'LATAM', revenue: 275000, target: 280000, deals: 10, conv: 44, avg: 27500 },
+  { name: 'Casey Kim', initials: 'CK', color: '#f06060', region: 'NA', revenue: 248000, target: 300000, deals: 9, conv: 41, avg: 27556 },
+  { name: 'Riley Shaw', initials: 'RS', color: '#4ade80', region: 'EMEA', revenue: 196000, target: 250000, deals: 8, conv: 37, avg: 24500 }
+];
+
+const ACTIVITIES = [
+  { icon: '✓', cls: 'ai-closed', text: '<strong>Jordan Mills</strong> closed <strong>Apex Solutions</strong> — $48,000', time: '2h ago' },
+  { icon: '☎', cls: 'ai-call', text: '<strong>Taylor Reed</strong> logged 4 discovery calls with fintech prospects', time: '3h ago' },
+  { icon: '✉', cls: 'ai-email', text: '<strong>Alex Chen</strong> sent proposal to <strong>Vertex Corp</strong> — $65,000 deal', time: '5h ago' },
+  { icon: '⊙', cls: 'ai-meeting', text: '<strong>Morgan Lee</strong> completed demo with <strong>BlueStar Group</strong>', time: '6h ago' },
+  { icon: '✓', cls: 'ai-closed', text: '<strong>Casey Kim</strong> closed <strong>Radiant Systems</strong> — $31,000', time: '1d ago' },
+  { icon: '☎', cls: 'ai-call', text: '<strong>Riley Shaw</strong> made 6 outbound prospecting calls — 2 booked', time: '1d ago' }
+];
+
+// ── KPI UPDATE ───────────────────────────────────────────────────────────
+function updateKPIs() {
+  const rev = REPS.reduce((a,r)=>a+r.revenue,0);
+  const deals = REPS.reduce((a,r)=>a+r.deals,0);
+  const conv = Math.round(REPS.reduce((a,r)=>a+r.conv,0)/REPS.length);
+  const avg = Math.round(rev/deals);
+  document.getElementById('kpi-revenue').textContent = '$'+rev.toLocaleString();
+  document.getElementById('kpi-deals').textContent = deals;
+  document.getElementById('kpi-conv').textContent = conv+'%';
+  document.getElementById('kpi-avg').textContent = '$'+avg.toLocaleString();
+}
+
+// ── REVENUE CHART ────────────────────────────────────────────────────────
+let revChart;
+function buildRevenueChart() {
+  const d = MONTHLY.quarter;
+  const legend = document.getElementById('rev-legend');
+  legend.innerHTML = `
+    <div class="legend-item"><div class="legend-dot" style="background:#c8f060"></div>Revenue</div>
+    <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,0.2); border:1px dashed rgba(255,255,255,0.3)"></div>Target</div>
+  `;
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+  revChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {
+          label: 'Revenue',
+          data: d.revenue,
+          borderColor: '#c8f060',
+          backgroundColor: 'rgba(200,240,96,0.08)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#c8f060',
+          pointBorderColor: '#0e0e11',
+          pointBorderWidth: 2
+        },
+        {
+          label: 'Target',
+          data: d.target,
+          borderColor: 'rgba(255,255,255,0.2)',
+          borderDash: [5,4],
+          fill: false,
+          tension: 0.4,
+          borderWidth: 1.5,
+          pointRadius: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e1e24',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#f0ede8',
+          bodyColor: '#888785',
+          padding: 12,
+          callbacks: {
+            label: ctx => ' $' + ctx.raw.toLocaleString()
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#888785', font: { size: 11 } },
+          border: { display: false }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: {
+            color: '#888785', font: { size: 11 },
+            callback: v => '$' + (v/1000).toFixed(0) + 'k'
+          },
+          border: { display: false }
+        }
+      }
+    }
+  });
+}
+
+// ── SOURCE CHART ─────────────────────────────────────────────────────────
+function buildSourceChart() {
+  const ctx = document.getElementById('sourceChart').getContext('2d');
+  const legend = document.getElementById('source-legend');
+  legend.innerHTML = SOURCES.map(s =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${s.color}"></div>${s.label} ${s.value}%</div>`
+  ).join('');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: SOURCES.map(s=>s.label),
+      datasets: [{
+        data: SOURCES.map(s=>s.value),
+        backgroundColor: SOURCES.map(s=>s.color),
+        borderColor: '#0e0e11',
+        borderWidth: 3,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e1e24',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#f0ede8',
+          bodyColor: '#888785',
+          padding: 12,
+          callbacks: { label: ctx => ' ' + ctx.raw + '% of deals' }
+        }
+      }
+    }
+  });
+}
+
+// ── WIN RATE CHART ───────────────────────────────────────────────────────
+function buildWinRateChart() {
+  const ctx = document.getElementById('winrateChart').getContext('2d');
+  const colors = ['#c8f060','#7c6af7','#60c8f0','#f0c060','#f06060'];
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: WIN_RATES.map(w=>w.label),
+      datasets: [{
+        data: WIN_RATES.map(w=>w.rate),
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e1e24',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#f0ede8',
+          bodyColor: '#888785',
+          padding: 12,
+          callbacks: { label: ctx => ' ' + ctx.raw + '% win rate' }
+        }
+      },
+      scales: {
+        x: {
+          max: 80,
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#888785', font: { size: 11 }, callback: v => v + '%' },
+          border: { display: false }
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: '#888785', font: { size: 11 } },
+          border: { display: false }
+        }
+      }
+    }
+  });
+}
+
+// ── FUNNEL ───────────────────────────────────────────────────────────────
+function buildFunnel() {
+  const max = FUNNEL_STAGES[0].count;
+  const wrap = document.getElementById('funnel');
+  wrap.innerHTML = FUNNEL_STAGES.map((s,i) => {
+    const pct = Math.round((s.count/max)*100);
+    const dropPct = i > 0 ? Math.round((1 - s.count/FUNNEL_STAGES[i-1].count)*100) : null;
+    return `
+      <div class="funnel-stage">
+        <div class="funnel-label">${s.label}</div>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar" style="width:${pct}%; background:${s.color};">
+            ${pct > 20 ? s.count : ''}
+          </div>
+        </div>
+        <div class="funnel-count">${pct <= 20 ? s.count : ''}</div>
+        <div class="funnel-pct">${dropPct !== null ? '-'+dropPct+'%' : ''}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── REP TABLE ────────────────────────────────────────────────────────────
+let sortKey = 'revenue';
+function sortReps(key, btn) {
+  sortKey = key;
+  document.querySelectorAll('#sort-rev,#sort-deals,#sort-conv').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildRepTable();
+}
+function buildRepTable() {
+  const sorted = [...REPS].sort((a,b) => {
+    if (sortKey === 'revenue') return b.revenue - a.revenue;
+    if (sortKey === 'deals') return b.deals - a.deals;
+    return b.conv - a.conv;
+  });
+  const tbody = document.getElementById('rep-tbody');
+  tbody.innerHTML = sorted.map((r,i) => {
+    const tgtPct = Math.round((r.revenue/r.target)*100);
+    const barColor = tgtPct >= 100 ? '#4ade80' : tgtPct >= 80 ? '#fbbf24' : '#f87171';
+    const badge = tgtPct >= 100
+      ? `<span class="badge badge-green">On Track</span>`
+      : tgtPct >= 80
+      ? `<span class="badge badge-amber">Behind</span>`
+      : `<span class="badge badge-red">At Risk</span>`;
+    return `
+      <tr>
+        <td style="color:var(--muted); font-family:var(--font-mono); font-size:12px;">${i+1}</td>
+        <td>
+          <div class="rep-name-cell">
+            <div class="rep-avatar" style="background:${r.color}22; color:${r.color}; font-family:var(--font-mono);">${r.initials}</div>
+            <div>
+              <div style="font-weight:500;">${r.name}</div>
+              <div style="font-size:11px; color:var(--muted);">${r.region}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-family:var(--font-mono);">$${r.revenue.toLocaleString()}</td>
+        <td>
+          <div style="font-size:12px; font-family:var(--font-mono); color:${barColor};">${tgtPct}%</div>
+          <div class="progress-bar-wrap"><div class="progress-bar" style="width:${Math.min(tgtPct,100)}%; background:${barColor};"></div></div>
+        </td>
+        <td style="font-family:var(--font-mono);">${r.deals}</td>
+        <td style="font-family:var(--font-mono);">${r.conv}%</td>
+        <td style="font-family:var(--font-mono);">$${r.avg.toLocaleString()}</td>
+        <td>${badge}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── ACTIVITY ─────────────────────────────────────────────────────────────
+function buildActivity() {
+  const list = document.getElementById('activity-list');
+  list.innerHTML = ACTIVITIES.map(a => `
+    <div class="activity-item">
+      <div class="activity-icon ${a.cls}">${a.icon}</div>
+      <div class="activity-text">${a.text}</div>
+      <div class="activity-time">${a.time}</div>
+    </div>
+  `).join('');
+}
+
+// ── NAV / FILTER ──────────────────────────────────────────────────────────
+function setPage(page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+function setFilter(range, btn) {
+  document.querySelectorAll('.filter-row .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────
+updateKPIs();
+buildRevenueChart();
+buildSourceChart();
+buildWinRateChart();
+buildFunnel();
+buildRepTable();
+buildActivity();
+</script>
+</body>
+</html>
